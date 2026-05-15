@@ -1,37 +1,35 @@
 -- =========================================================================
 -- PROYECTO: LogisStock
--- MOTOR: MySQL
--- DESCRIPCIÓN: Esquema relacional para el prototipo operacional (PUD)
+-- MOTOR: MySQL 8.0+
+-- DESCRIPCIÓN: Script de inicialización y datos de prueba limpios
 -- =========================================================================
 
--- 1. Creación de la Base de Datos
-CREATE DATABASE IF NOT EXISTS logisstock_db
-CHARACTER SET utf8mb4 
-COLLATE utf8mb4_unicode_ci;
-
+DROP DATABASE IF EXISTS logisstock_db;
+CREATE DATABASE logisstock_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE logisstock_db;
 
--- 2. Tabla de Usuarios (Seguridad y Autenticación)
-CREATE TABLE IF NOT EXISTS usuarios (
+-- Evitar conflictos de claves foráneas durante la creación
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 1. Tabla de Usuarios
+CREATE TABLE usuarios (
     id_usuario INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL, -- Se asume almacenamiento de hash (ej. SHA-256)
+    password VARCHAR(255) NOT NULL,
     rol ENUM('ADMINISTRADOR', 'DEPOSITO', 'VENDEDOR') NOT NULL,
-    activo BOOLEAN DEFAULT TRUE,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    activo BOOLEAN DEFAULT TRUE
 );
 
--- 3. Tabla de Proveedores
-CREATE TABLE IF NOT EXISTS proveedores (
+-- 2. Tabla de Proveedores
+CREATE TABLE proveedores (
     id_proveedor INT AUTO_INCREMENT PRIMARY KEY,
     razon_social VARCHAR(100) NOT NULL,
     cuit VARCHAR(20) NOT NULL UNIQUE,
-    telefono VARCHAR(20),
-    email VARCHAR(100)
+    telefono VARCHAR(20)
 );
 
--- 4. Tabla de Productos (Inventario)
-CREATE TABLE IF NOT EXISTS productos (
+-- 3. Tabla de Productos
+CREATE TABLE productos (
     id_producto INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     categoria VARCHAR(50) NOT NULL,
@@ -39,70 +37,62 @@ CREATE TABLE IF NOT EXISTS productos (
     stock_actual INT NOT NULL DEFAULT 0,
     stock_minimo INT NOT NULL DEFAULT 0,
     id_proveedor INT,
-    estado ENUM('ACTIVO', 'INACTIVO') DEFAULT 'ACTIVO',
     CONSTRAINT fk_producto_proveedor FOREIGN KEY (id_proveedor) 
         REFERENCES proveedores(id_proveedor) ON DELETE SET NULL
 );
 
--- 5. Tabla de Clientes
-CREATE TABLE IF NOT EXISTS clientes (
+-- 4. Tabla de Clientes
+CREATE TABLE clientes (
     id_cliente INT AUTO_INCREMENT PRIMARY KEY,
     razon_social VARCHAR(100) NOT NULL,
     cuit VARCHAR(20) NOT NULL UNIQUE,
-    direccion VARCHAR(200) NOT NULL,
-    telefono VARCHAR(20)
+    direccion VARCHAR(200) NOT NULL
 );
 
--- 6. Tabla de Pedidos (Cabecera)
-CREATE TABLE IF NOT EXISTS pedidos (
+-- 5. Tabla de Pedidos (Cabecera)
+CREATE TABLE pedidos (
     id_pedido INT AUTO_INCREMENT PRIMARY KEY,
-    fecha_emision DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_emision TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     id_cliente INT NOT NULL,
-    id_usuario INT NOT NULL, -- Vendedor que generó el pedido
+    id_usuario INT NOT NULL,
     estado ENUM('PENDIENTE', 'APROBADO_PICKING', 'EN_RUTA', 'ENTREGADO', 'CANCELADO') DEFAULT 'PENDIENTE',
     total DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    CONSTRAINT fk_pedido_cliente FOREIGN KEY (id_cliente) 
-        REFERENCES clientes(id_cliente) ON DELETE RESTRICT,
-    CONSTRAINT fk_pedido_usuario FOREIGN KEY (id_usuario) 
-        REFERENCES usuarios(id_usuario) ON DELETE RESTRICT
+    CONSTRAINT fk_pedido_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente),
+    CONSTRAINT fk_pedido_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
--- 7. Tabla de Detalle de Pedidos
-CREATE TABLE IF NOT EXISTS detalle_pedidos (
+-- 6. Tabla de Detalle de Pedidos
+CREATE TABLE detalle_pedidos (
     id_detalle INT AUTO_INCREMENT PRIMARY KEY,
     id_pedido INT NOT NULL,
     id_producto INT NOT NULL,
     cantidad INT NOT NULL CHECK (cantidad > 0),
     precio_unitario DECIMAL(10, 2) NOT NULL,
     subtotal DECIMAL(12, 2) NOT NULL,
-    CONSTRAINT fk_detalle_pedido FOREIGN KEY (id_pedido) 
-        REFERENCES pedidos(id_pedido) ON DELETE CASCADE,
-    CONSTRAINT fk_detalle_producto FOREIGN KEY (id_producto) 
-        REFERENCES productos(id_producto) ON DELETE RESTRICT
+    CONSTRAINT fk_detalle_pedido FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido) ON DELETE CASCADE,
+    CONSTRAINT fk_detalle_producto FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
 );
 
+SET FOREIGN_KEY_CHECKS = 1;
+
 -- =========================================================================
--- DATOS DE PRUEBA (MOCK DATA) PARA EL PROTOTIPO
+-- INSERCIÓN DE DATOS DEMO (MOCK DATA)
 -- =========================================================================
 
--- Insertar Usuarios de prueba
 INSERT INTO usuarios (username, password, rol) VALUES 
-('admin_logis', 'hash_password_aqui', 'ADMINISTRADOR'),
-('depo_juan', 'hash_password_aqui', 'DEPOSITO'),
-('vend_ana', 'hash_password_aqui', 'VENDEDOR');
+('admin', 'admin123', 'ADMINISTRADOR'),
+('juan_deposito', 'depo123', 'DEPOSITO'),
+('ana_ventas', 'ventas123', 'VENDEDOR');
 
--- Insertar Proveedores de prueba
-INSERT INTO proveedores (razon_social, cuit, telefono, email) VALUES 
-('Distribuidora Alimentos S.A.', '30-12345678-9', '011-555-1234', 'ventas@alimentos.com'),
-('Bebidas del Sur SRL', '30-98765432-1', '0351-444-5678', 'contacto@bebidasur.com');
+INSERT INTO proveedores (razon_social, cuit, telefono) VALUES 
+('Distribuidora Alimentos Central', '30-11111111-9', '011-4555-1234'),
+('Bebidas del Sur SRL', '30-22222222-9', '0351-444-5678');
 
--- Insertar Productos de prueba
 INSERT INTO productos (nombre, categoria, precio_mayorista, stock_actual, stock_minimo, id_proveedor) VALUES 
-('Fideos Secos 500g', 'Alimentos', 450.50, 1500, 200, 1),
-('Arroz Blanco 1kg', 'Alimentos', 850.00, 800, 150, 1),
-('Gaseosa Cola 2.25L', 'Bebidas', 1200.00, 50, 100, 2); -- Este producto debería disparar la alerta de stock mínimo
+('Fideos Secos 500g', 'Alimentos', 450.00, 500, 100, 1),
+('Arroz Integral 1kg', 'Alimentos', 900.00, 12, 50, 1), -- Dispara alerta de stock mínimo
+('Gaseosa Cola 2.25L', 'Bebidas', 1300.00, 80, 40, 2);
 
--- Insertar Clientes de prueba
-INSERT INTO clientes (razon_social, cuit, direccion, telefono) VALUES 
-('Supermercado El Centro', '20-11223344-5', 'Av. San Martín 123', '0351-111-2222'),
-('Minimercado Las Rosas', '27-55667788-9', 'Calle Las Rosas 456', '0351-333-4444');
+INSERT INTO clientes (razon_social, cuit, direccion) VALUES 
+('Supermercado Cordillera', '20-33333333-5', 'Av. Colón 1400'),
+('Almacén de Barrio SRL', '27-44444444-9', 'Belgrano 450');
