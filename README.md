@@ -18,7 +18,7 @@ El esquema relacional (ubicado en `/database/schema.sql`) garantiza la integrida
 * `pedidos` y `detalle_pedidos`: Trazabilidad transaccional de ventas y reserva de inventario.
 
 ## ⚙️ Instalación y Configuración
-1. Clonar este repositorio: `git clone https://github.com/tu-usuario/LogisStock-PUD-Prototype.git`
+1. Clonar este repositorio: `git clone Senioramazon/SPI-2026-LogisStock-PUD-Prototype.git`
 2. Importar el script `database/schema.sql` en tu servidor MySQL local o remoto.
 3. Configurar las credenciales de la base de datos en la clase de conexión Java.
 4. Compilar y ejecutar.
