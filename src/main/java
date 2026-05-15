@@ -1,0 +1,12 @@
+com/
+└── logisstock/
+    ├── config/
+    │   └── DBConnection.java
+    ├── model/
+    │   └── Producto.java
+    ├── dao/
+    │   └── ProductoDAO.java
+    ├── controller/
+    │   └── StockController.java
+    └── main/
+        └── Main.java
